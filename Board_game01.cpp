@@ -4,7 +4,7 @@
 using namespace std;
 
 class Customer{
-    friend Reservation_manager;
+    friend class Reservation_manager;
     private:
     string first_name;
     string last_name;
@@ -97,7 +97,6 @@ class Reservation_manager{
     void make_reservatiom();
     void return_game();
     void display_all_reservations();
-    void display_all_customers();
  
 };
 Reservation_manager::Reservation_manager():game_head(nullptr),reservation_head(nullptr){    //Constructor for Reservation manager.
@@ -107,7 +106,24 @@ Reservation_manager::Reservation_manager():game_head(nullptr),reservation_head(n
 
 Reservation_manager::~Reservation_manager(){
     Available_gamelist* current_game = game_head; //Look this up again
+    Available_gamelist* next_game_node =nullptr;
 
+    while(current_game!=nullptr){
+        next_game_node=current_game->next_game;
+        delete current_game;
+        current_game = next_game_node;
+    }
+    game_head=nullptr;
+
+    Reservation* current_res =reservation_head;
+    Reservation* next_res_node = nullptr;
+
+    while(current_res != nullptr){
+        next_res_node=current_res->next_reservation;
+        delete current_res;
+        current_res =next_res_node;
+    }
+    reservation_head=nullptr;
 }
 
 void Reservation_manager::initializeGameList(){
@@ -152,7 +168,7 @@ void Reservation_manager::save_reservation_to_file(){ //also try to use throw ca
         int count=0;
 
         while(current!=nullptr){
-            file<<current->reserved_game<<" "<<current->U_id;
+            file<<current->reserved_game<<" "<<current->U_id<<endl;
             current=current->next_reservation;
             count++;
         }
@@ -198,8 +214,89 @@ bool Reservation_manager::isCustomerReserved(const string& id){
 
 }
 
+void Reservation_manager::make_reservatiom(){
+    cout<<"Make a new reservation here :";
+    string id,game2reserve;
+
+    Customer tempCustomer;
+    cin>>tempCustomer;
+    id =tempCustomer.U_id;
+
+    if(id.empty()){
+        cout<<"Please provide a valid ID";
+        return;
+    }
+    if(isCustomerReserved(id)){
+        return;
+    }
+
+    cout<<"Enter the game to be reserved :";
+    cin>>game2reserve;
+
+    if(isGameReserved(game2reserve)){
+        return;
+    }
+
+    Reservation* new_node = new Reservation(game2reserve,id);
+    new_node->next_reservation=reservation_head;
+    reservation_head=new_node;
+    save_reservation_to_file();
+
+}
+
+void Reservation_manager::return_game(){
+    if(reservation_head==nullptr){
+        cout<<"There are no reservations at the moment.";
+        return;
+    }
+    string search_id;
+    cout<<"Please Enter your member ID to handover the boardgame";
+    cin>>search_id;
+
+    Reservation* current =reservation_head;
+    Reservation* previous =nullptr;
+
+    while(current!=nullptr && current->U_id!=search_id){
+        previous=current;
+        current = current->next_reservation;
+    }
+
+    if(current==nullptr){
+        cout<<"Sorry, no active reservations were found for"<<search_id;
+        return;
+    }
+    if(current==reservation_head){
+        reservation_head=current->next_reservation;
+        cout<<"The reservation for board game"<<current->reserved_game<<" ID :"<<search_id<<" Has been handed over";
+        delete current;
+    }
+    else{
+        previous->next_reservation=current->next_reservation;
+        cout<<"The reservation for board game"<<current->reserved_game<<" ID :"<<search_id<<" Has been handed over";
+        delete current;
+    }
+    save_reservation_to_file();
+
+}
+void Reservation_manager::display_all_reservations(){
+    cout<<"___Current active reservations___";
+    if(reservation_head==nullptr){
+        cout<<"No reservations are currently active";
+        return;
+    }
+
+    Reservation* current = reservation_head;
+    int count =1;
+    while(current!=nullptr){
+    cout<<count++<<". Game "<<current->reserved_game<<" Customer ID "<<current->U_id<<endl;
+    current=current->next_reservation;
+    }
+}
+
 void Reservation_manager::run_menu(){
-    int choice;
+   int choice;
+    do{ 
+    
     cout<<"----------CAFE MANAGEMENT----------"<<endl;
     cout<<"1. Make a board game reservation"<<endl;
     cout<<"2. Cancel reservation and hand over board game<"<<endl;
@@ -215,16 +312,25 @@ void Reservation_manager::run_menu(){
         break;
     }
     case 2:{
-
+        return_game();
+        break;
     }
     case 3:{
-
+        display_all_reservations();
+        break;
     }
     case 4:{
-
+        cout<<"Exiting the program..have a good day! :)";
+        break;
     }
     
     default:
         break;
     }
+}while(choice!=4);
+}
+
+int main(){
+    Reservation_manager manager;
+    manager.run_menu();
 }
